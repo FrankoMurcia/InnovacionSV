@@ -141,6 +141,7 @@ public class VentaService {
      * - Registra el intento rechazado.
      * - Mantiene la venta pendiente.
      */
+    
     public Transaccion confirmarPago(int id, MetodoPago metodoPago)
             throws SQLException {
 
@@ -210,19 +211,41 @@ public class VentaService {
                 // 3. Procesar el método de pago.
                 Transaccion transaccion = metodoPago.procesar(total);
 
-                // 4. Registrar el intento en MySQL.
+                // 4. Insertar el pago y recuperar su ID real.
+                int idTransaccion;
+
                 try (PreparedStatement ps =
-                        cn.prepareStatement(insertarPago)) {
+                        cn.prepareStatement(
+                            insertarPago,
+                            Statement.RETURN_GENERATED_KEYS
+                        )) {
 
                     ps.setInt(1, id);
                     ps.setDouble(2, transaccion.getMonto());
                     ps.setString(3, transaccion.getMetodo());
                     ps.setString(4, transaccion.getEstado().name());
 
-                    ps.executeUpdate();
+                    int filas = ps.executeUpdate();
+
+                    if (filas == 0) {
+                        throw new SQLException(
+                            "No se pudo registrar la transacción."
+                        );
+                    }
+
+                    try (ResultSet rs = ps.getGeneratedKeys()) {
+
+                        if (!rs.next()) {
+                            throw new SQLException(
+                                "No se pudo recuperar el ID de la transacción."
+                            );
+                        }
+
+                        idTransaccion = rs.getInt(1);
+                    }
                 }
 
-                // 5. Actualizar la venta únicamente si fue aprobado.
+                // 5. Actualizar la venta únicamente si fue aprobada.
                 if (transaccion.getEstado() == Estado.PAGADA) {
 
                     try (PreparedStatement ps =
@@ -243,10 +266,18 @@ public class VentaService {
                     }
                 }
 
-                // 6. Confirmar todas las operaciones.
+                // 6. Confirmar las operaciones en MySQL.
                 cn.commit();
 
-                return transaccion;
+                // 7. Devolver la transacción con su ID real.
+                return new Transaccion(
+                    idTransaccion,
+                    id,
+                    transaccion.getMonto(),
+                    transaccion.getMetodo(),
+                    transaccion.getEstado(),
+                    transaccion.getFechaDateTime()
+                );
 
             } catch (SQLException | RuntimeException e) {
 
@@ -259,4 +290,5 @@ public class VentaService {
             }
         }
     }
+
 }

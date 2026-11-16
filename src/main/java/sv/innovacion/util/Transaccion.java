@@ -12,51 +12,74 @@ import sv.innovacion.model.Estado;
  * @author Frank
  */
 public class Transaccion {
-    
-    private static int contador = 1;
-    
+
     private int id;
+    private int ventaId;
     private double monto;
     private String metodo;
     private Estado estado;
     private LocalDateTime fecha;
-    
-    //Constructor
-    public Transaccion(double monto, String metodo, Estado estado){
-        this.id = contador++;
+
+    // Constructor utilizado al procesar un pago nuevo.
+    public Transaccion(double monto, String metodo, Estado estado) {
+        this(0, 0, monto, metodo, estado, LocalDateTime.now());
+    }
+
+    // Constructor utilizado al recuperar una transacción de MySQL.
+    public Transaccion(
+            int id,
+            int ventaId,
+            double monto,
+            String metodo,
+            Estado estado,
+            LocalDateTime fecha) {
+
+        this.id = id;
+        this.ventaId = ventaId;
         this.monto = monto;
         this.metodo = metodo;
         this.estado = estado;
-        this.fecha = LocalDateTime.now();
+        this.fecha = fecha;
     }
-    
-    public int getId(){
+
+    public int getId() {
         return id;
     }
-    
-    public double getMonto(){
+
+    public int getVentaId() {
+        return ventaId;
+    }
+
+    public double getMonto() {
         return monto;
     }
-    
-    public String getMetodo(){
+
+    public String getMetodo() {
         return metodo;
     }
-    
-    public Estado getEstado(){
+
+    public Estado getEstado() {
         return estado;
     }
-    
-    public String getFecha(){
+
+    // Fecha como texto para mostrar en la interfaz.
+    public String getFecha() {
         return fecha.format(
-        DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
         );
     }
-    
+
+    // Fecha como objeto para realizar consultas y ordenar.
+    public LocalDateTime getFechaDateTime() {
+        return fecha;
+    }
+
     @Override
-    public String toString(){
-        return "Transsaccion #" + id
+    public String toString() {
+        return "Transacción #" + id
+                + " | Venta: " + ventaId
                 + " | Monto: $" + String.format("%.2f", monto)
-                + " | Metodo: " + metodo
+                + " | Método: " + metodo
                 + " | Estado: " + estado
                 + " | Fecha: " + getFecha();
     }

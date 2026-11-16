@@ -8,7 +8,7 @@ package sv.innovacion.util;
  *
  * @author Frank
  */
-interface MetodoPago {
+public interface MetodoPago {
     
     Transaccion procesar(double monto);
     String getNombre();

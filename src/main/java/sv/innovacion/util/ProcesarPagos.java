@@ -1,105 +1,72 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
+
 package sv.innovacion.util;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
 import sv.innovacion.model.Estado;
 import sv.innovacion.model.Venta;
+import sv.innovacion.service.VentaService;
 
-/**
- *
- * @author Frank
- */
 public class ProcesarPagos {
-    
-    private List<MetodoPago> metodos;
-    private List<Transaccion> transacciones;
-    private List<Venta> ventas;
-    
-    public ProcesarPagos(){
-        metodos = new ArrayList<>();
-        transacciones = new ArrayList<>();
-        ventas = new ArrayList<>();
+
+    private final List<Transaccion> transacciones;
+    private final VentaService ventaService;
+
+    public ProcesarPagos(VentaService ventaService) {
+        this.ventaService = ventaService;
+        this.transacciones = new ArrayList<>();
     }
-    
-    public void seleccionarMetodo(MetodoPago metodo){
-        metodos.add(metodo);
-    }
-    
-    public void registrarVenta(Venta venta){
-        ventas.add(venta);
-        venta.registrar();
-    }
-    
-    public Transaccion procesarPago(Venta venta, MetodoPago metodo){
-        Transaccion transaccion = metodo.procesar(venta.getTotal());
-        
-        transacciones.add(transaccion);
-        
-        if(transaccion.getEstado() == Estado.PAGADA){
-            venta.marcarPagada();
+
+    public Transaccion procesarPago(
+            Venta venta,
+            MetodoPago metodo) throws SQLException {
+
+        if (venta == null || metodo == null) {
+            throw new IllegalArgumentException(
+                "La venta y el método de pago son obligatorios."
+            );
         }
-        
+
+        if (venta.getEstado() != Estado.PENDIENTE) {
+            throw new IllegalStateException(
+                "La venta no está pendiente de pago."
+            );
+        }
+
+        // El servicio procesa el pago y lo persiste en MySQL.
+        Transaccion transaccion = ventaService.confirmarPago(
+            venta.getId(),
+            metodo
+        );
+
+        // Guardar el resultado en el historial local.
+        transacciones.add(transaccion);
+
+        // Actualizar el objeto Venta en memoria.
+        if (transaccion.getEstado() == Estado.PAGADA) {
+            venta.marcarPagada(metodo.getNombre());
+        }
+
         return transaccion;
     }
-    
-    public void consultarTransacciones(){
-        System.out.println("\n ===Historial de Transacciones =====");
-        
-        if(transacciones.isEmpty()){
-            System.out.println("No existen transacciones");
+
+    public List<Transaccion> getTransacciones() {
+        return new ArrayList<>(transacciones);
+    }
+
+    public void consultarTransacciones() {
+
+        System.out.println("\n=== Historial de Transacciones ===");
+
+        if (transacciones.isEmpty()) {
+            System.out.println("No existen transacciones.");
             return;
         }
-        
-        for(Transaccion t : transacciones){
-            System.out.println(t);
+
+        for (Transaccion transaccion : transacciones) {
+            System.out.println(transaccion);
         }
-    }
-    
-    public void mostrarVentas(){
-        System.out.println("\n======= Ventas Registradas =======");
-        
-        if(ventas.isEmpty()){
-            System.out.println("No existen ventas.");
-        }
-        
-        for(Venta v : ventas){
-            v.mostrar();
-        }
-    }
-    
-    public void generarResumen(){
-        int pagadas = 0;
-        int pendientes = 0;
-        int rechazadas = 0;
-        double totalCobrado = 0;
-        
-        for(Venta v : ventas){
-            if(v.getEstado() == Estado.PAGADA ){
-                pagadas++;
-            }else if(v.getEstado() == Estado.PENDIENTE){
-                pendientes++;
-            }
-        }
-        
-        for(Transaccion t : transacciones ){
-            if(t.getEstado() == Estado.PAGADA){
-                totalCobrado += t.getMonto();
-            }else if (t.getEstado() == Estado.RECHAZADA){
-                rechazadas++;
-            }
-        }
-        
-        System.out.println("\n________ RESUMEN ____________");
-        System.out.println("Ventas registradas: " + ventas.size());
-        System.out.println("Ventas pagadas: " + pagadas);
-        System.out.println("Ventas pendientes: " + pendientes);
-        System.out.println("Pagos rechazados: " + rechazadas);
-        System.out.printf("Total cobrado: $%.2f%n", totalCobrado);
-        System.out.println("_______________________________");
     }
 }
-
