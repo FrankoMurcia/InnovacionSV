@@ -1,5 +1,8 @@
+sv\innovacion\ui\TransaccionesPanel.class
 sv\innovacion\service\VentaService.class
 sv\innovacion\model\Efectivo.class
+sv\innovacion\ui\TransaccionesPanel$1.class
+sv\innovacion\ui\ResumenPagosPanel$1.class
 sv\innovacion\ui\RecuperarDialog.class
 sv\innovacion\ui\PagoDialog.class
 sv\innovacion\model\PagoElectronico.class
@@ -10,13 +13,17 @@ sv\innovacion\ui\DashboardFrame$2.class
 sv\innovacion\ui\DashboardFrame$BotonPagoEditor.class
 sv\innovacion\ui\DashboardFrame$BotonPagoRenderer.class
 sv\innovacion\ui\DashboardFrame$1.class
+sv\innovacion\service\ResumenPagoService.class
 sv\innovacion\model\Transferencia.class
 sv\innovacion\util\Estilo.class
 sv\innovacion\service\UsuarioService.class
+sv\innovacion\service\TransaccionService.class
 sv\innovacion\ui\VentaDialog.class
 sv\innovacion\model\Estado.class
+sv\innovacion\service\ResumenPagoService$ResumenMetodo.class
 sv\innovacion\model\Tarjeta.class
 sv\innovacion\util\MetodoPago.class
+sv\innovacion\ui\TransaccionesPanel$ConsultaTransacciones.class
 sv\innovacion\conexion\Conexion.class
 sv\innovacion\util\PagoBase.class
 sv\innovacion\ui\LoginFrame.class
@@ -25,4 +32,5 @@ sv\innovacion\util\ProcesarPagos.class
 sv\innovacion\Main.class
 sv\innovacion\ui\Componentes.class
 sv\innovacion\ui\RegistroDialog.class
+sv\innovacion\ui\ResumenPagosPanel.class
 sv\innovacion\util\Transaccion.class

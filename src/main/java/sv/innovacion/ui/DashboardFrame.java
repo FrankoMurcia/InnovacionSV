@@ -18,6 +18,12 @@ import sv.innovacion.model.Estado;
 import sv.innovacion.util.MetodoPago;
 import sv.innovacion.util.Transaccion;
 import java.sql.SQLException;
+import sv.innovacion.ui.ResumenPagosPanel;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public class DashboardFrame extends JFrame {
     private final UsuarioService servicio;
@@ -66,12 +72,13 @@ public class DashboardFrame extends JFrame {
         logo.setFont(new Font("Segoe UI", Font.BOLD, 17));
         p.add(logo);
         p.add(Box.createVerticalStrut(38));
-        agregarMenu(p, "▦   Resumen", this::mostrarInicio);
-        agregarMenu(p, "⇄   Transacciones", this::mostrarTransacciones);
-        agregarMenu(p," Venta", this::mostrarVenta );
-        agregarMenu(p, "♙   Clientes", () -> mostrarAviso("Clientes", "Módulo preparado para una futura conexión."));
-        agregarMenu(p, "▤   Reportes", () -> mostrarAviso("Reportes", "Los reportes estarán disponibles en una siguiente etapa."));
-        agregarMenu(p, "⚙   Configuración", () -> mostrarAviso("Configuración", "Opciones de configuración de demostración."));
+        agregarMenu(p, "Resumen", this::mostrarInicio);
+        agregarMenu(p, "Transacciones", this::mostrarTransacciones);
+        agregarMenu(p,"Venta", this::mostrarVenta );
+        agregarMenu(p, " Resumen de pagos", this::mostrarResumenPagos);
+        //agregarMenu(p, "Clientes", () -> mostrarAviso("Clientes", "Módulo preparado para una futura conexión."));
+        //agregarMenu(p, "Reportes", () -> mostrarAviso("Reportes", "Los reportes estarán disponibles en una siguiente etapa."));
+        //agregarMenu(p, "Configuración", () -> mostrarAviso("Configuración", "Opciones de configuración de demostración."));
         p.add(Box.createVerticalGlue());
         agregarMenu(p, "Cerrar sesión", this::cerrarSesion);
         return p;
@@ -358,7 +365,6 @@ public class DashboardFrame extends JFrame {
         }
     }
 
-    
     private void abrirPago(int id) {
 
         try {
@@ -475,9 +481,6 @@ public class DashboardFrame extends JFrame {
         );
     }
 
-
-
-    
     private void agregarMenu(JPanel panel, String texto, Runnable accion) {
         JButton b = new JButton(texto);
         b.setMaximumSize(new Dimension(195, 43));
@@ -510,34 +513,104 @@ public class DashboardFrame extends JFrame {
         return p;
     }
 
+    //Es la vista principal del sistema 
     private void mostrarInicio() {
-        contenido.removeAll();
-        JPanel p = new JPanel();
-        p.setOpaque(false);
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.add(Componentes.titulo("Resumen general", 26));
-        p.add(Box.createVerticalStrut(6));
-        JLabel bienvenida = new JLabel("Bienvenido/a, " + usuario.getNombreCompleto() + ". Aquí tienes el estado de la plataforma.");
-        bienvenida.setForeground(Estilo.GRIS);
-        p.add(bienvenida);
-        p.add(Box.createVerticalStrut(25));
 
-        JPanel tarjetas = new JPanel(new GridLayout(1, 3, 15, 0));
-        tarjetas.setOpaque(false);
-        tarjetas.add(tarjeta("Transacciones de hoy", "128", "Datos ficticios de demostración"));
-        tarjetas.add(tarjeta("Monto procesado", "$8,450.00", "Valor simulado"));
-        tarjetas.add(tarjeta("Operaciones pendientes", "7", "No representa pagos reales"));
-        p.add(tarjetas);
-        p.add(Box.createVerticalStrut(25));
-        p.add(Componentes.titulo("Actividad reciente", 18));
-        p.add(Box.createVerticalStrut(10));
-        p.add(tablaTransacciones());
-        contenido.add(p, BorderLayout.CENTER);
+        contenido.removeAll();
+
+        try {
+
+            // Obtener las ventas reales desde MySQL.
+            List<Venta> ventas = new ArrayList<>(ventaServicio.listarTodas());
+
+            LocalDate hoy = LocalDate.now();
+
+            long ventasHoy = ventas.stream()
+                    .filter(v -> v.getFecha().toLocalDate().equals(hoy))
+                    .count();
+
+            double montoRecaudadoHoy = ventas.stream()
+                    .filter(v -> v.getFecha().toLocalDate().equals(hoy))
+                    .filter(v -> v.getEstado() == Estado.PAGADA)
+                    .mapToDouble(Venta::getTotal)
+                    .sum();
+
+            long ventasPendientes = ventas.stream()
+                    .filter(v -> v.getEstado() == Estado.PENDIENTE)
+                    .count();
+
+            // Panel principal.
+            JPanel p = new JPanel();
+            p.setOpaque(false);
+            p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
+
+            p.add(Componentes.titulo("Resumen general", 26));
+            p.add(Box.createVerticalStrut(6));
+
+            JLabel bienvenida = new JLabel(
+                    "Bienvenido/a, " + usuario.getNombreCompleto()
+                    + ". Aquí tienes el estado actual de la plataforma."
+            );
+
+            bienvenida.setForeground(Estilo.GRIS);
+            p.add(bienvenida);
+
+            p.add(Box.createVerticalStrut(25));
+
+            // Tarjetas con datos reales.
+            JPanel tarjetas = new JPanel(new GridLayout(1, 3, 15, 0));
+            tarjetas.setOpaque(false);
+
+            tarjetas.add(tarjeta(
+                    "Ventas de hoy",
+                    String.valueOf(ventasHoy),
+                    "Ventas registradas durante el día"
+            ));
+
+            tarjetas.add(tarjeta(
+                    "Monto recaudado hoy",
+                    String.format("$%,.2f", montoRecaudadoHoy),
+                    "Total de ventas pagadas hoy"
+            ));
+
+            tarjetas.add(tarjeta(
+                    "Ventas pendientes",
+                    String.valueOf(ventasPendientes),
+                    "Ventas que esperan confirmación de pago"
+            ));
+
+            p.add(tarjetas);
+            p.add(Box.createVerticalStrut(25));
+
+            p.add(Componentes.titulo("Actividad reciente", 18));
+            p.add(Box.createVerticalStrut(10));
+
+            // Tabla con las ventas reales.
+            p.add(tablaVentas(ventas));
+
+            JScrollPane scroll = new JScrollPane(p);
+            scroll.setBorder(null);
+            scroll.getViewport().setOpaque(false);
+            scroll.setOpaque(false);
+
+            contenido.add(scroll, BorderLayout.CENTER);
+
+        } catch (SQLException ex) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "No se pudo cargar el resumen general desde MySQL.\n"
+                    + ex.getMessage(),
+                    "Error de base de datos",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+
         contenido.revalidate();
         contenido.repaint();
     }
     
-     private JPanel tarjeta(String titulo, String valor, String detalle) {
+    private JPanel tarjeta(String titulo, String valor, String detalle) {
         JPanel p = new JPanel();
         p.setBackground(Color.WHITE);
         p.setBorder(BorderFactory.createCompoundBorder(
@@ -560,38 +633,83 @@ public class DashboardFrame extends JFrame {
         return p;
     }
 
-    private JScrollPane tablaTransacciones() {
-        String[] columnas = {"Código", "Fecha", "Cliente de prueba", "Monto simulado", "Estado"};
-        Object[][] datos = {
-            {"TRX-1001", "13/11/2026", "Cliente Demo 01", "$125.00", "Completada"},
-            {"TRX-1002", "13/11/2026", "Cliente Demo 02", "$80.50", "Pendiente"},
-            {"TRX-1003", "13/11/2026", "Cliente Demo 03", "$240.00", "Completada"},
-            {"TRX-1004", "13/11/2026", "Cliente Demo 04", "$55.00", "En revisión"}
+    private JScrollPane tablaVentas(List<Venta> ventas) {
+
+        String[] columnas = {
+            "ID VENTA",
+            "FECHA",
+            "TOTAL",
+            "ESTADO"
         };
-        JTable tabla = new JTable(new DefaultTableModel(datos, columnas) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
-        });
-        tabla.setRowHeight(32);
-        tabla.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 12));
+
+        DefaultTableModel modelo = new DefaultTableModel(columnas, 0) {
+
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        // Ordenar ventas desde la más reciente.
+        ventas.sort(
+                Comparator.comparing(Venta::getFecha).reversed()
+        );
+
+        DateTimeFormatter formato =
+                DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+        // Mostrar como máximo las últimas 8 ventas.
+        int limite = Math.min(ventas.size(), 8);
+
+        for (int i = 0; i < limite; i++) {
+
+            Venta venta = ventas.get(i);
+
+            modelo.addRow(new Object[]{
+                venta.getId(),
+                venta.getFecha().format(formato),
+                String.format("$%,.2f", venta.getTotal()),
+                venta.getEstado()
+            });
+        }
+
+        JTable tabla = new JTable(modelo);
+
+        tabla.setRowHeight(36);
         tabla.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        JScrollPane sp = new JScrollPane(tabla);
-        sp.setPreferredSize(new Dimension(700, 190));
-        return sp;
+
+        tabla.getTableHeader().setFont(
+                new Font("Segoe UI", Font.BOLD, 12)
+        );
+
+        tabla.getTableHeader().setBackground(Color.WHITE);
+        tabla.getTableHeader().setForeground(Estilo.TEXTO);
+
+        tabla.setShowVerticalLines(false);
+        tabla.setGridColor(new Color(235, 239, 243));
+
+        JScrollPane scroll = new JScrollPane(tabla);
+
+        scroll.setPreferredSize(new Dimension(700, 340));
+
+        scroll.setBorder(BorderFactory.createLineBorder(
+                new Color(228, 234, 240)
+        ));
+
+        scroll.getViewport().setBackground(Color.WHITE);
+
+        return scroll;
     }
 
+    
     private void mostrarTransacciones() {
+
         contenido.removeAll();
-        JPanel p = new JPanel(new BorderLayout(0, 15));
-        p.setOpaque(false);
-        p.add(Componentes.titulo("Historial de transacciones", 25), BorderLayout.NORTH);
-        JPanel centro = new JPanel(new BorderLayout(0, 10));
-        centro.setOpaque(false);
-        JLabel aviso = new JLabel("Listado ficticio para mostrar el diseño. No se realizan cobros ni movimientos de dinero.");
-        aviso.setForeground(Estilo.GRIS);
-        centro.add(aviso, BorderLayout.NORTH);
-        centro.add(tablaTransacciones(), BorderLayout.CENTER);
-        p.add(centro, BorderLayout.CENTER);
-        contenido.add(p, BorderLayout.CENTER);
+
+        TransaccionesPanel panel = new TransaccionesPanel();
+
+        contenido.add(panel, BorderLayout.CENTER);
+
         contenido.revalidate();
         contenido.repaint();
     }
@@ -632,4 +750,17 @@ public class DashboardFrame extends JFrame {
             dispose();
         }
     }
+    
+    private void mostrarResumenPagos() {
+
+        contenido.removeAll();
+
+        ResumenPagosPanel panel = new ResumenPagosPanel();
+
+        contenido.add(panel, BorderLayout.CENTER);
+
+        contenido.revalidate();
+        contenido.repaint();
+    }
+
 }
